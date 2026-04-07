@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Promoción Masiva - KORI</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        :root { --primary: #00334e; --accent: #00a8e8; --error: #e63946; --bg: #f8fafc; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: #1e293b; padding: 20px; }
+        .container { max-width: 1100px; margin: auto; background: white; padding: 35px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
+        h1 { text-align: center; color: var(--primary); font-size: 1.6em; border-bottom: 2px solid #f1f5f9; padding-bottom: 15px; }
+        h2 { color: var(--primary); font-size: 1em; margin-top: 30px; text-transform: uppercase; background: #f1f5f9; padding: 10px; border-left: 4px solid var(--accent); }
+        h3 { color: var(--accent); font-size: 0.95em; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 20px; }
+        label { display: block; font-weight: 600; margin-bottom: 6px; font-size: 0.85em; color: #64748b; }
+        
+        input, select, textarea { width: 100%; padding: 10px; border: 1px solid #e2e8f0; border-radius: 6px; box-sizing: border-box; transition: all 0.3s ease; font-family: inherit; }
+        input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0, 168, 232, 0.15); }
+        input:disabled, select:disabled { background-color: #f1f5f9; cursor: not-allowed; opacity: 0.7; }
+        textarea { resize: vertical; min-height: 40px; }
+        
+        .gz-container { display: flex; gap: 15px; flex-wrap: wrap; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; min-height: 50px; }
+        .gz-item { display: flex; align-items: center; gap: 8px; font-size: 0.9em; cursor: pointer; transition: color 0.2s ease; }
+        .gz-item:hover { color: var(--accent); }
+        
+        .gz-master-section { border: 1px solid #e2e8f0; border-radius: 10px; padding: 20px; margin-bottom: 30px; background: #fff; box-shadow: 0 4px 6px rgba(0,0,0,0.02); }
+        table { width: 100%; border-collapse: collapse; font-size: 0.85em; margin-bottom: 15px; }
+        th { background-color: var(--primary); color: white; padding: 12px; border: 1px solid #fff; }
+        td { border: 1px solid #ddd; padding: 8px; text-align: center; }
+        
+        tbody tr { transition: background-color 0.2s ease; }
+        tbody tr:hover td:not(.col-gris) { background-color: #f8fafc; }
+        .col-gris { background-color: #f1f5f9; color: #334155; }
+        
+        .add-row { background: var(--accent); color: white; border: none; width: 30px; height: 30px; border-radius: 50%; cursor: pointer; font-weight: bold; margin-bottom: 15px; transition: all 0.2s ease; display: inline-flex; align-items: center; justify-content: center; }
+        .add-row:hover { background: #008cc2; transform: scale(1.1); box-shadow: 0 3px 8px rgba(0, 168, 232, 0.3); }
+        
+        .btn-delete { background: var(--error); color: white; border: none; width: 26px; height: 26px; border-radius: 50%; cursor: pointer; font-weight: bold; transition: all 0.2s ease; display: inline-flex; align-items: center; justify-content: center; padding: 0; font-size: 0.9em; }
+        .btn-delete:hover { transform: scale(1.1); box-shadow: 0 3px 8px rgba(230, 57, 70, 0.3); background: #d90429; }
+        
+        .budget-card { text-align: right; padding: 20px; background: #f1f5f9; border-radius: 8px; margin-top: 20px; }
+        .disclaimer { font-size: 0.75em; color: #64748b; font-style: italic; margin-top: 5px; }
+        .resumen-cuadro { margin-top: 30px; background: #fff; border: 2px solid var(--primary); border-radius: 10px; padding: 20px; }
+        #modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 100; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
+        .modal-content { background: white; padding: 30px; border-radius: 12px; text-align: center; max-width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+        
+        .btn-cont { background: var(--primary); color: white; border: none; padding: 15px; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; font-size: 1.1em; transition: all 0.3s ease; }
+        .btn-cont:not(:disabled):hover { background: #001f30; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0, 51, 78, 0.2); }
+        .btn-cont:not(:disabled):active { transform: translateY(0); box-shadow: none; }
+        .btn-cont:disabled { background: #cbd5e1; cursor: not-allowed; transform: none; box-shadow: none; color: #64748b; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <form id="formRequerimiento" onsubmit="return false;">
+    <h1>REQUERIMIENTO DE PROMOCIÓN MASIVA</h1>
+
+    <section>
+        <h2>1. Datos del Solicitante</h2>
+        <div class="grid">
+            <div class="field"><label>Nombre completo:</label><input type="text" id="sol_nombre" placeholder="Ej. Juan Pérez" required></div>
+            <div class="field">
+                <label>Territorio:</label>
+                <select id="sol_territorio" onchange="cargarAgencias()" required>
+                    <option value="">Seleccione Territorio...</option>
+                </select>
+            </div>
+            <div class="field"><label>Fecha de promoción masiva:</label><input type="date" id="fechaPromo" onchange="validarFecha(this)" required></div>
+        </div>
+    </section>
+
+    <section>
+        <h2>2. Ubicación y GZ</h2>
+        <div class="grid">
+            <div class="field">
+                <label>Agencia:</label>
+                <select id="agencia" onchange="generarGZ()" required disabled>
+                    <option value="">Seleccione Territorio primero...</option>
+                </select>
+            </div>
+        </div>
+        <label>Marque la(s) GZ que solicita:</label>
+        <div id="gzCheckboxes" class="gz-container"></div>
+    </section>
+
+    <div id="dinamicoSections"></div>
+
+    <section class="resumen-cuadro">
+        <h2>Resumen General del Requerimiento</h2>
+        <div id="cuadroResumenContenido">
+            <p style="text-align: center; color: #94a3b8;">Seleccione una GZ para ver el resumen.</p>
+        </div>
+    </section>
+
+    <div class="budget-card">
+        <div style="font-size: 1.2em; font-weight: bold; color: var(--primary);">TOTAL ESTIMADO (MERCH + ANIMADORES): <span id="granTotal">S/ 0.00</span></div>
+        <div class="disclaimer">* El total general incluye la inversión de Merchandising y el costo referencial máximo de Animadores (S/ 150.00 por hora c/u).</div>
+        <div id="budgetAlert" style="color: var(--error); font-weight: bold; display: none; margin-top:10px;">⚠️ No se puede exportar: El presupuesto total excede los S/ 2000.00</div>
+    </div>
+
+    <button class="btn-cont" id="btnExportar" style="margin-top:20px;" onclick="mostrarModal()">EXPORTAR REQUERIMIENTO</button>
+    </form>
+</div>
+
+<div id="modal">
+    <div class="modal-content">
+        <h3>Confirmar Exportación</h3>
+        <p>Se descargarán dos hojas: Una de resumen visual y una base de datos para Power BI.</p>
+        <button class="btn-cont" onclick="confirmarExportacion()">Descargar Excel</button>
+        <button onclick="document.getElementById('modal').style.display='none'" style="margin-top:10px; background:none; border:none; color:#64748b; cursor:pointer; font-weight:bold;">Cancelar</button>
+    </div>
+</div>
+
+<script>
+    const estructura = {
+        "TERRITORIO AREQUIPA": { "OF.PRINC": ["PAUCARPATA", "CERRO COLORADO"] },
+        "AREQUIPA SUR": { "OF.PRINC": ["JLB Y RIVERO"], "PEDREGAL": ["PEDREGAL"], "MOLLENDO": ["MOLLENDO"], "CAMANA": ["CAMANA"] },
+        "TERRITORIO SUR": { "VES": ["VES", "LURIN"], "SJM": ["SJM", "CHORRILLOS", "VMT"] },
+        "TERRITORIO SUR CHICO": { "MALA": ["MALA"], "CAÑETE": ["CAÑETE"], "ICA": ["ICA SUR", "ICA NORTE"] },
+        "TERRITORIO ESTE": { "CC": ["ATE", "SANTA ANITA"], "MANCHAY": ["MANCHAY"], "HUAYCAN": ["HUACHIPA", "HUAYCAN"] },
+        "TERRITORIO NORTE": { "LOS OLIVOS - PRO": ["LOS OLIVOS - PRO", "CARABAYLLO", "COMAS"], "VENTANILLA": ["VENTANILLA", "MI PERÚ", "PUENTE PIEDRA"] },
+        "TERRITORIO NORTE CHICO": { "BARRANCA": ["BARRANCA"], "HUACHO": ["HUACHO"], "HUARAL": ["HUARAL"] },
+        "TERRITORIO SJL": { "SJL": ["CANTO GRANDE", "PRÓCERES", "RIMAC", "ZÁRATE"], "SMP": ["PUEBLO LIBRE", "SMP", "INDEPENDENCIA"] },
+        "TERRITORIO LAMBAYEQUE": { "CHICLAYO": ["LAMBAYEQUE", "CHICLAYO", "JLO", "LA VICTORIA"] },
+        "TERRITORIO CHIMBOTE": { "CHIMBOTE": ["CHIMBOTE", "NVO CHIMBOTE"] }
+    };
+
+    const catalogo = [
+        {n: "LIBRETAS KORI PUBLICITARIOS", p: 1.39, u: "Unid"},
+        {n: "LAPICERO PLASTICO PUBLICITARIO", p: 0.70, u: "Unid"},
+        {n: "LLAVEROS DESTAPADORES", p: 0.57, u: "Unid"},
+        {n: "ALCANCIA", p: 6.50, u: "Unid"},
+        {n: "MANDILES", p: 11.50, u: "Unid"},
+        {n: "BOLSAS PUBLICITARIAS TARPAULLIN", p: 14.00, u: "Unid"},
+        {n: "GLOBOS", p: 78.00, u: "Ciento"},
+        {n: "LAPICERO PUBLICITARIO DE METAL", p: 1.30, u: "Unid"},
+        {n: "LLAVERO PUBLICITARIO DE CUERINA", p: 6.50, u: "Unid"}
+    ];
+
+    const opcionesHoras = ["08:00 AM", "08:30 AM", "09:00 AM", "09:30 AM", "10:00 AM", "10:30 AM", "11:00 AM", "11:30 AM", "12:00 PM"];
+
+    const terrSel = document.getElementById('sol_territorio');
+    Object.keys(estructura).forEach(t => terrSel.options.add(new Option(t, t)));
+
+    function cargarAgencias() {
+        const agSel = document.getElementById('agencia');
+        agSel.innerHTML = '<option value="">Seleccione Agencia...</option>';
+        const territorio = terrSel.value;
+        if (territorio) {
+            agSel.disabled = false;
+            Object.keys(estructura[territorio]).forEach(ag => agSel.options.add(new Option(ag, ag)));
+        } else {
+            agSel.disabled = true;
+        }
+        document.getElementById('gzCheckboxes').innerHTML = "";
+    }
+
+    function validarFecha(input) {
+        const f = new Date(input.value + "T00:00:00");
+        const hoy = new Date();
+        const diff = (f - hoy) / (1000*60*60*24);
+        if (diff < 23 || f.getDay() !== 6) {
+            alert("Seleccione un sábado con 1 mes de anticipación.");
+            input.value = "";
+        }
+    }
+
+    function generarGZ() {
+        const agVal = document.getElementById('agencia').value;
+        const terrVal = terrSel.value;
+        const cont = document.getElementById('gzCheckboxes');
+        cont.innerHTML = "";
+        document.getElementById('dinamicoSections').innerHTML = "";
+        
+        if (agVal && terrVal) {
+            const lista = estructura[terrVal][agVal];
+            lista.forEach(gz => {
+                const div = document.createElement('div');
+                div.className = "gz-item";
+                div.innerHTML = `<input type="checkbox" value="${gz}" onchange="toggleTodo('${gz}', this)"> ${gz}`;
+                cont.appendChild(div);
+            });
+        }
+        calcTotal();
+    }
+
+    function toggleTodo(gz, cb) {
+        const mainCont = document.getElementById('dinamicoSections');
+        if(cb.checked) {
+            const section = document.createElement('div');
+            section.className = "gz-master-section";
+            section.id = `master-${gz}`;
+            section.innerHTML = `
+                <div style="background:var(--primary); color:white; padding:10px; font-weight:bold; text-align:center; border-radius:5px">GZ: ${gz}</div>
+                <h3>1. Merchandising</h3>
+                <table>
+                    <thead><tr><th>ARTÍCULOS</th><th>UNID</th><th>PRECIO</th><th>CANT.</th><th>TOTAL</th><th style="width:30px;"></th></tr></thead>
+                    <tbody id="body-${gz}"></tbody>
+                </table>
+                <button class="add-row" onclick="addArticulo('${gz}')" title="Añadir artículo">+</button>
+                
+                <div class="field" style="margin-bottom: 20px; margin-top: 5px;">
+                    <label>Comentarios adicionales (Merchandising):</label>
+                    <textarea class="m-comentarios" rows="2" placeholder="Ej. Comprar dos electrodomésticos, considerar animador y arlequín..."></textarea>
+                </div>
+
+                <h3>2. Detalle de Mercado</h3>
+                <div class="grid group-m">
+                    <input type="text" placeholder="Ubicación" class="m-ubica" oninput="validarObligatorio(this, '.group-m'); actualizarResumen()">
+                    <input type="text" placeholder="Link Maps" class="m-map" oninput="validarObligatorio(this, '.group-m')">
+                    <input type="text" placeholder="Referencia" class="m-ref" oninput="validarObligatorio(this, '.group-m')">
+                    <select class="m-ini" onchange="validarObligatorio(this, '.group-m'); actualizarResumen()">
+                        <option value="">Hora Inicio...</option>${opcionesHoras.map(h => `<option value="${h}">${h}</option>`).join('')}
+                    </select>
+                    <select class="m-fin" onchange="validarObligatorio(this, '.group-m'); actualizarResumen()">
+                        <option value="">Hora Fin...</option>${opcionesHoras.map(h => `<option value="${h}">${h}</option>`).join('')}
+                    </select>
+                </div>
+                <h3>3. Detalle de Animadores</h3>
+                <div class="grid group-a">
+                    <div class="field"><label>N° Animadores:</label><input type="number" value="0" min="0" class="a-num" oninput="validarObligatorio(this, '.group-a'); actualizarResumen(); calcTotal()"></div>
+                    <div class="field"><label>Cant. Horas:</label><input type="number" value="0" min="0" class="a-hrs" oninput="validarObligatorio(this, '.group-a'); calcTotal()"></div>
+                    <div class="field"><label>Contacto GZ:</label>
+                        <input type="tel" placeholder="Celular (9 dígitos)" class="a-tel" maxlength="9" minlength="9" pattern="[0-9]{9}" title="Ingrese exactamente 9 números sin espacios" oninput="this.value = this.value.replace(/[^0-9]/g, ''); validarObligatorio(this, '.group-a')">
+                    </div>
+                    <div class="field"><label>Costo Referencial:</label><input type="text" value="S/ 100 - S/ 150 aprox por Hora" disabled style="background-color: #f1f5f9; color: #64748b; font-style: italic; border-color: transparent;"></div>
+                </div>`;
+            mainCont.appendChild(section);
+            addArticulo(gz);
+        } else {
+            const el = document.getElementById(`master-${gz}`);
+            if(el) el.remove();
+        }
+        calcTotal();
+    }
+
+    function addArticulo(gz) {
+        const tbody = document.getElementById(`body-${gz}`);
+        const rid = Date.now() + Math.random();
+        const tr = document.createElement('tr');
+        tr.id = `r-${rid}`;
+        
+        tr.innerHTML = `
+            <td><select class="sel-art" onchange="updRow('${rid}',this); actualizarResumen()" required><option value="">Elegir...</option>${catalogo.map(x=>`<option value="${x.n}">${x.n}</option>`).join('')}</select></td>
+            <td class="col-gris u">-</td><td class="col-gris p" data-v="0">S/ 0.00</td>
+            <td><input type="number" min="1" placeholder="Ej. 10" class="c" oninput="calcTotal()" required disabled></td>
+            <td class="col-gris t">S/ 0.00</td>
+            <td><button class="btn-delete" onclick="eliminarFila('${rid}')" title="Eliminar fila">✖</button></td>`;
+        tbody.appendChild(tr);
+    }
+
+    function updRow(rid, sel) {
+        const row = document.getElementById(`r-${rid}`);
+        const itm = catalogo.find(x => x.n === sel.value);
+        const inputCant = row.querySelector('.c');
+        
+        if(itm) {
+            row.querySelector('.u').innerText = itm.u;
+            row.querySelector('.p').innerText = `S/ ${itm.p.toFixed(2)}`;
+            row.querySelector('.p').dataset.v = itm.p;
+            inputCant.disabled = false;
+        } else {
+            row.querySelector('.u').innerText = '-';
+            row.querySelector('.p').innerText = 'S/ 0.00';
+            row.querySelector('.p').dataset.v = 0;
+            inputCant.disabled = true;
+            inputCant.value = '';
+        }
+        calcTotal();
+    }
+
+    function eliminarFila(rid) {
+        const row = document.getElementById(`r-${rid}`);
+        if (row) {
+            row.remove();
+            calcTotal();
+            actualizarResumen();
+        }
+    }
+
+    function calcTotal() {
+        let totalMerch = 0;
+        let totalAnimadores = 0;
+
+        // Sumar total de Merchandising
+        document.querySelectorAll('[id^="body-"] tr').forEach(row => {
+            const p = parseFloat(row.querySelector('.p').dataset.v) || 0;
+            const c = parseFloat(row.querySelector('.c').value) || 0;
+            const sub = p * c;
+            row.querySelector('.t').innerText = `S/ ${sub.toFixed(2)}`;
+            totalMerch += sub;
+        });
+
+        // Sumar total de Animadores (Calculando con el tope de S/ 150 por hora para cuidar presupuesto)
+        document.querySelectorAll('.group-a').forEach(group => {
+            const numAnimadores = parseInt(group.querySelector('.a-num').value) || 0;
+            const horasAnimadores = parseFloat(group.querySelector('.a-hrs').value) || 0;
+            if (numAnimadores > 0 && horasAnimadores > 0) {
+                totalAnimadores += numAnimadores * horasAnimadores * 150;
+            }
+        });
+
+        const totalGeneral = totalMerch + totalAnimadores;
+        document.getElementById('granTotal').innerText = `S/ ${totalGeneral.toFixed(2)}`;
+        
+        const alertBox = document.getElementById('budgetAlert');
+        const btn = document.getElementById('btnExportar');
+        
+        if (totalGeneral > 2000) {
+            alertBox.style.display = 'block';
+            btn.disabled = true; 
+        } else {
+            alertBox.style.display = 'none';
+            btn.disabled = false;
+        }
+        actualizarResumen();
+    }
+
+    function actualizarResumen() {
+        const resumenCont = document.getElementById('cuadroResumenContenido');
+        const secciones = document.querySelectorAll('.gz-master-section');
+        if(secciones.length === 0) {
+            resumenCont.innerHTML = '<p style="text-align: center; color: #94a3b8;">No hay GZ seleccionadas.</p>';
+            return;
+        }
+        let html = '<table style="min-width:100%"><tr><th>GZ</th><th>Mercado</th><th>Horario</th><th>Artículos</th><th>Anim.</th></tr>';
+        secciones.forEach(sec => {
+            const gz = sec.id.replace('master-','');
+            const mercado = sec.querySelector('.m-ubica').value || '---';
+            const hIni = sec.querySelector('.m-ini').value || '-';
+            const hFin = sec.querySelector('.m-fin').value || '-';
+            const anim = sec.querySelector('.a-num').value || '0';
+            const arts = Array.from(sec.querySelectorAll('.sel-art')).map(s => s.value).filter(v => v).join(', ') || '---';
+            html += `<tr><td>${gz}</td><td>${mercado}</td><td>${hIni} a ${hFin}</td><td style="font-size:0.75em">${arts}</td><td>${anim}</td></tr>`;
+        });
+        html += '</table>';
+        resumenCont.innerHTML = html;
+    }
+
+    function validarObligatorio(input, selectorGrupo) {
+        const parent = input.closest('.gz-master-section');
+        const grupo = parent.querySelectorAll(selectorGrupo + ' input, ' + selectorGrupo + ' select');
+        const algunLleno = Array.from(grupo).some(i => i.value !== "" && i.value !== "0" && i.value !== "Hora Inicio..." && i.value !== "Hora Fin...");
+        grupo.forEach(i => {
+            if (algunLleno) i.setAttribute('required', 'true');
+            else i.removeAttribute('required');
+        });
+    }
+
+    function mostrarModal() {
+        const total = parseFloat(document.getElementById('granTotal').innerText.replace('S/ ', ''));
+        if (total > 2000) {
+            alert("⚠️ No se puede exportar. El presupuesto total excede los S/ 2000.00.");
+            return;
+        }
+        const form = document.getElementById('formRequerimiento');
+        if (form.checkValidity()) document.getElementById('modal').style.display = 'flex';
+        else form.reportValidity();
+    }
+
+    function confirmarExportacion() {
+        const solNombre = document.getElementById('sol_nombre').value || "";
+        const solTerr = document.getElementById('sol_territorio').value || "";
+        const agencia = document.getElementById('agencia').value || "";
+        const fecha = document.getElementById('fechaPromo').value || "";
+        const granTotal = document.getElementById('granTotal').innerText;
+
+        const dataVisual = [
+            ["REQUERIMIENTO CONSOLIDADO DE PROMOCIÓN MASIVA - KORI"],
+            [""],
+            ["--- DATOS GENERALES ---"],
+            ["Solicitante:", solNombre, "Territorio:", solTerr],
+            ["Agencia:", agencia, "Fecha Promoción:", fecha],
+            ["TOTAL ESTIMADO (MERCH + ANIMADORES):", granTotal],
+            [""],
+            ["--- DETALLE DE REQUERIMIENTOS POR GZ ---"]
+        ];
+
+        const dataPBI = [[
+            "Solicitante", "Territorio", "Agencia", "Fecha Promo", 
+            "GZ", "Mercado", "Ref. Mercado", "Link Maps", 
+            "Hora Inicio", "Hora Fin", "N° Animadores", "Horas Animación", "Costo Máximo Animadores GZ", "Contacto GZ", 
+            "Comentarios Merch", "Artículo", "Unidad", "Precio Unitario", "Cantidad", "Costo Total Merch"
+        ]];
+
+        document.querySelectorAll('.gz-master-section').forEach(sec => {
+            const gz = sec.id.replace('master-','');
+            const mercado = sec.querySelector('.m-ubica').value || "";
+            const ref = sec.querySelector('.m-ref').value || "";
+            const maps = sec.querySelector('.m-map').value || "";
+            const hIni = sec.querySelector('.m-ini').value || "";
+            const hFin = sec.querySelector('.m-fin').value || "";
+            const animNum = parseInt(sec.querySelector('.a-num').value) || 0;
+            const animHrs = parseFloat(sec.querySelector('.a-hrs').value) || 0;
+            const animTel = sec.querySelector('.a-tel').value || "";
+            const coment = sec.querySelector('.m-comentarios').value || "";
+            
+            const costoAnimadores = animNum * animHrs * 150;
+
+            dataVisual.push([""]); 
+            dataVisual.push(["GZ:", gz, "Mercado:", mercado]);
+            dataVisual.push(["Horario:", `${hIni} - ${hFin}`, "Animadores:", `${animNum} (${animHrs} hrs - Estimado Máx: S/ ${costoAnimadores.toFixed(2)})`]);
+            dataVisual.push(["Contacto GZ:", animTel, "Referencia:", ref]);
+            dataVisual.push(["Link Maps:", maps]);
+            if (coment) dataVisual.push(["Comentarios:", coment]);
+            
+            dataVisual.push([""]); 
+            dataVisual.push(["ARTÍCULO", "UNIDAD", "PRECIO", "CANTIDAD", "SUBTOTAL"]);
+
+            const baseRow = [
+                solNombre, solTerr, agencia, fecha,
+                gz, mercado, ref, maps,
+                hIni, hFin, animNum, animHrs, costoAnimadores, animTel, coment
+            ];
+
+            let tieneArticulos = false;
+
+            sec.querySelectorAll('tbody tr').forEach(row => {
+                const art = row.querySelector('.sel-art').value;
+                if(art) {
+                    tieneArticulos = true;
+                    const u = row.cells[1].innerText;
+                    const p = parseFloat(row.querySelector('.p').dataset.v) || 0;
+                    const c = parseFloat(row.querySelector('.c').value) || 0;
+                    const subtotalVisual = row.cells[4].innerText;
+                    const totalPBI = p * c;
+                    
+                    dataVisual.push([art, u, `S/ ${p.toFixed(2)}`, c, subtotalVisual]);
+                    dataPBI.push([...baseRow, art, u, p, c, totalPBI]);
+                }
+            });
+
+            if(!tieneArticulos) {
+                dataVisual.push(["(Sin artículos registrados)"]);
+                dataPBI.push([...baseRow, "Sin artículos", "-", 0, 0, 0]);
+            }
+        });
+
+        const wb = XLSX.utils.book_new();
+        const wsVisual = XLSX.utils.aoa_to_sheet(dataVisual);
+        const wsPBI = XLSX.utils.aoa_to_sheet(dataPBI);
+
+        wsVisual['!cols'] = [ {wch: 35}, {wch: 25}, {wch: 20}, {wch: 15}, {wch: 15} ];
+        
+        XLSX.utils.book_append_sheet(wb, wsVisual, "Resumen_Visual");
+        XLSX.utils.book_append_sheet(wb, wsPBI, "Base_PowerBI");
+
+        XLSX.writeFile(wb, "Kori_Promocion_Masiva.xlsx");
+        document.getElementById('modal').style.display = 'none';
+    }
+</script>
+</body>
+</html>
